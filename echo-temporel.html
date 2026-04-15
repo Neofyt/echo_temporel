@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ÉCHO TEMPOREL</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  /* ══════════════════════════
+     THÈME SOMBRE  (défaut)
+     Fond très sombre, texte très clair — contraste maximum
+  ══════════════════════════ */
+  :root, [data-theme="dark"] {
+    --bg:          #0e0b08;   /* quasi-noir chaud */
+    --surface:     #1c1610;   /* surface carte */
+    --surface-mid: #252018;   /* surface anecdote */
+    --border-dim:  #352d20;
+    --border:      #5a4e3a;
+
+    --text:        #f0e2c4;   /* 16.8:1 / bg   AAA */
+    --text-2:      #ddd0ae;   /* 12.1:1 / surface AAA */
+    --text-sub:    #c8b48a;   /*  8.5:1 / bg   AAA */
+
+    --gold:        #c4a84a;   /*  7.2:1 / bg   AAA */
+    --gold-bright: #d8bc60;   /*  8.8:1 / surface AAA */
+    --rust:        #e09060;   /*  7.1:1 / bg   AAA */
+    --rust-2:      #f0a870;   /*  7.5:1 / surface-mid AAA */
+
+    --correct-bg:  rgba(40,80,50,0.25);
+    --correct-bd:  #2a5a30;
+    --correct-tx:  #78d490;   /*  8.9:1 / surface AAA */
+    --wrong-bg:    rgba(120,30,30,0.22);
+    --wrong-bd:    #6a2020;
+    --wrong-tx:    #e09898;   /*  7.6:1 / surface AAA */
+    --revealed-bg: rgba(196,168,74,0.15);
+
+    --strata-color: rgba(90,78,58,0.2);
+    --sq-correct:  #2a6838;
+    --sq-adjacent: #7a6020;
+    --sq-wrong:    #7a2828;
+    --sq-text:     #f0e2c4;
+  }
+
+  /* ══════════════════════════
+     THÈME CLAIR
+     Fond ivoire très clair, encre très sombre
+  ══════════════════════════ */
+  [data-theme="light"] {
+    --bg:          #faf4e8;
+    --surface:     #f0e8d0;
+    --surface-mid: #e4d8bc;
+    --border-dim:  #bca888;
+    --border:      #907858;
+
+    --text:        #120c04;   /* 18.2:1 / bg   AAA */
+    --text-2:      #241808;   /* 14.6:1 / surface AAA */
+    --text-sub:    #3e2c10;   /*  9.8:1 / bg   AAA */
+
+    --gold:        #674c00;   /*  7.0:1 / bg   AAA */
+    --gold-bright: #5a4000;   /*  8.5:1 / surface AAA */
+    --rust:        #6e2004;   /*  8.8:1 / bg   AAA */
+    --rust-2:      #5e1800;   /*  9.6:1 / surface-mid AAA */
+
+    --correct-bg:  rgba(20,80,40,0.10);
+    --correct-bd:  #0e5028;
+    --correct-tx:  #0a3e1e;   /* 11.2:1 / surface AAA */
+    --wrong-bg:    rgba(110,20,10,0.09);
+    --wrong-bd:    #6e1808;
+    --wrong-tx:    #5a1000;   /* 11.8:1 / surface AAA */
+    --revealed-bg: rgba(103,76,0,0.10);
+
+    --strata-color: rgba(156,132,96,0.28);
+    --sq-correct:  #0e5028;
+    --sq-adjacent: #674c00;
+    --sq-wrong:    #6e2004;
+    --sq-text:     #faf4e8;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    font-family: 'Lora', serif;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 60px;
+    overflow-x: hidden;
+    transition: background 0.35s, color 0.35s;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: 0.5;
+  }
+
+  .strata { position:fixed; left:0; right:0; pointer-events:none; z-index:0; }
+  .strata-line {
+    height: 1px;
+    background: linear-gradient(90deg, transparent 5%, var(--strata-color) 30%, var(--strata-color) 70%, transparent 95%);
+  }
+
+  .wrap { width:100%; max-width:680px; padding:0 24px; position:relative; z-index:1; }
+
+  /* ── THEME TOGGLE ── */
+  .theme-toggle {
+    position: fixed; top:20px; right:20px; z-index:100;
+    background: var(--surface);
+    border: 1px solid var(--border-dim);
+    border-radius: 20px;
+    padding: 7px 14px;
+    cursor: pointer;
+    font-family: 'Cinzel', serif;
+    font-size: 0.55rem;
+    letter-spacing: 0.2em;
+    color: var(--text-sub);
+    display: flex; align-items: center; gap:7px;
+    transition: all 0.2s;
+  }
+  .theme-toggle:hover { border-color: var(--border); color: var(--text); }
+  .theme-icon { font-size: 0.9rem; line-height:1; }
+
+  /* ── HEADER ── */
+  header { padding:48px 0 32px; text-align:center; }
+  .logo {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    font-weight: 900; letter-spacing:0.35em;
+    color: var(--gold); line-height:1;
+  }
+  .logo-sub {
+    font-family: 'Cinzel', serif;
+    font-size: 0.55rem; letter-spacing:0.6em;
+    text-transform: uppercase; color: var(--text-sub); margin-top:8px;
+  }
+  .header-divider { display:flex; align-items:center; gap:12px; margin:20px 0 0; }
+  .header-divider::before, .header-divider::after {
+    content:''; flex:1; height:1px;
+    background: linear-gradient(90deg, transparent, var(--border-dim), transparent);
+  }
+  .divider-icon { color:var(--rust); font-size:0.8rem; }
+
+  /* ── SCORE BAR ── */
+  .score-bar {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:12px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border-dim);
+    margin-bottom:28px;
+    font-family:'Cinzel',serif; font-size:0.62rem; letter-spacing:0.2em;
+    transition: background 0.35s, border-color 0.35s;
+  }
+  .score-bar-item { color: var(--text-sub); }
+  .score-bar-item span { color: var(--gold-bright); }
+
+  /* ── WORD CARD ── */
+  .word-card {
+    background: var(--surface);
+    border: 1px solid var(--border-dim);
+    padding: 36px 32px 28px;
+    text-align:center; margin-bottom:24px;
+    position:relative; overflow:hidden;
+    transition: background 0.35s, border-color 0.35s;
+  }
+  .word-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:2px;
+    background: linear-gradient(90deg, transparent, var(--rust), transparent);
+  }
+  .word-label {
+    font-family:'Cinzel',serif; font-size:0.55rem;
+    letter-spacing:0.5em; color:var(--text-sub);
+    text-transform:uppercase; margin-bottom:16px;
+  }
+  .word-main {
+    font-family:'Cinzel',serif;
+    font-size: clamp(2.2rem, 7vw, 3.8rem);
+    font-weight:900; color:var(--text);
+    letter-spacing:0.05em; line-height:1; margin-bottom:12px;
+  }
+  .word-pos { font-style:italic; font-size:0.85rem; color:var(--text-sub); }
+  .round-badge {
+    position:absolute; top:12px; right:16px;
+    font-family:'Cinzel',serif; font-size:0.5rem;
+    letter-spacing:0.2em; color:var(--rust);
+  }
+
+  /* ── AI LOADING STATE ── */
+  .ai-loading {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 20px;
+    color: var(--text-sub);
+    font-family: 'Cinzel', serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+  .ai-loading.show { display: flex; }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 2px solid var(--border-dim);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── EPOCH BUTTONS ── */
+  .epochs-title {
+    font-family:'Cinzel',serif; font-size:0.55rem;
+    letter-spacing:0.4em; text-transform:uppercase;
+    color:var(--text-sub); margin-bottom:14px; text-align:center;
+  }
+  .epochs-grid {
+    display:grid; grid-template-columns:repeat(3,1fr);
+    gap:10px; margin-bottom:24px;
+  }
+  .epoch-btn {
+    background: var(--surface);
+    border: 1px solid var(--border-dim);
+    color: var(--text-2);
+    padding:14px 8px;
+    font-family:'Cinzel',serif; font-size:0.6rem;
+    letter-spacing:0.1em; text-align:center;
+    cursor:pointer; transition:all 0.2s; line-height:1.5;
+  }
+  .epoch-btn:hover { border-color:var(--border); color:var(--text); background:var(--surface-mid); }
+  .epoch-btn .ep-date { display:block; font-size:0.5rem; color:var(--text-sub); margin-top:3px; }
+  .epoch-btn:disabled { cursor:default; }
+  .epoch-btn.correct  { border-color:var(--correct-bd); background:var(--correct-bg); color:var(--correct-tx); }
+  .epoch-btn.wrong    { border-color:var(--wrong-bd);   background:var(--wrong-bg);   color:var(--wrong-tx); opacity:0.8; }
+  .epoch-btn.revealed { border-color:var(--gold);       background:var(--revealed-bg); color:var(--gold-bright); }
+
+  /* ── ANECDOTE ── */
+  .anecdote-card {
+    background: var(--surface-mid);
+    border: 1px solid var(--border-dim);
+    border-left: 3px solid var(--rust);
+    padding:20px 24px; margin-bottom:24px;
+    display:none; animation:fadeUp 0.5s ease;
+    transition:background 0.35s;
+  }
+  .anecdote-card.show { display:block; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+  .anecdote-label {
+    font-family:'Cinzel',serif; font-size:0.52rem;
+    letter-spacing:0.4em; color:var(--rust-2);
+    text-transform:uppercase; margin-bottom:8px;
+  }
+  .anecdote-epoch { font-family:'Cinzel',serif; font-size:1rem; color:var(--gold-bright); margin-bottom:10px; }
+  .anecdote-text  { font-size:0.9rem; font-style:italic; color:var(--text-2); line-height:1.8; }
+  .anecdote-text strong { font-style:normal; color:var(--text); }
+
+  /* ── NEXT BUTTON ── */
+  .btn-next {
+    width:100%; background:transparent;
+    border:1px solid var(--border-dim); color:var(--text-sub);
+    padding:14px; font-family:'Cinzel',serif;
+    font-size:0.62rem; letter-spacing:0.3em; text-transform:uppercase;
+    cursor:pointer; transition:all 0.2s;
+    display:none; margin-bottom:24px;
+  }
+  .btn-next.show { display:block; }
+  .btn-next:hover { border-color:var(--gold); color:var(--gold-bright); }
+
+  /* ── SCREENS ── */
+  .screen {
+    position:fixed; inset:0; z-index:50;
+    background: var(--bg);
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    padding:48px 24px; text-align:center;
+    gap:20px; overflow-y:auto;
+    transition:background 0.35s;
+  }
+  .screen.hidden { display:none; }
+  .screen-label {
+    font-family:'Cinzel',serif; font-size:0.6rem;
+    letter-spacing:0.6em; color:var(--rust); text-transform:uppercase;
+  }
+  .screen-heading {
+    font-family:'Cinzel',serif;
+    font-size:clamp(2rem,6vw,3.5rem); font-weight:900;
+    color:var(--gold-bright); line-height:1.1;
+  }
+  .screen-body {
+    font-style:italic; font-size:0.95rem;
+    color:var(--text-2); line-height:1.8; max-width:480px;
+  }
+  .screen-body strong { font-style:normal; color:var(--text); }
+  .epoch-legend {
+    display:flex; flex-direction:column; gap:6px;
+    max-width:420px; width:100%;
+    border:1px solid var(--border-dim);
+    padding:16px 20px; text-align:left;
+  }
+  .legend-row {
+    display:flex; justify-content:space-between;
+    font-size:0.75rem; font-family:'Cinzel',serif; color:var(--text-sub);
+  }
+  .legend-row span { color:var(--gold); font-size:0.65rem; }
+  .btn-start {
+    background:transparent; border:1px solid var(--gold);
+    color:var(--gold-bright); padding:14px 48px;
+    font-family:'Cinzel',serif; font-size:0.65rem;
+    letter-spacing:0.5em; text-transform:uppercase;
+    cursor:pointer; transition:all 0.25s;
+  }
+  .btn-start:hover { background:var(--gold); color:var(--bg); }
+
+  /* ── END SCREEN ── */
+  .final-score {
+    font-family:'Cinzel',serif;
+    font-size:clamp(4rem,12vw,7rem); font-weight:900;
+    color:var(--gold-bright); line-height:1;
+  }
+  .score-squares {
+    display:flex; flex-wrap:wrap; gap:7px;
+    justify-content:center; max-width:380px;
+  }
+  .score-sq {
+    width:40px; height:40px; border-radius:4px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Cinzel',serif; font-size:0.52rem; font-weight:700;
+    color:var(--sq-text);
+    cursor:default; position:relative;
+    transition:transform 0.15s;
+    animation:sqPop 0.4s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .score-sq:hover { transform:scale(1.15); z-index:2; }
+  .score-sq.sq-correct  { background:var(--sq-correct); }
+  .score-sq.sq-adjacent { background:var(--sq-adjacent); }
+  .score-sq.sq-wrong    { background:var(--sq-wrong); }
+  @keyframes sqPop { from{opacity:0;transform:scale(0.6);} to{opacity:1;transform:scale(1);} }
+  .score-sq::after {
+    content:attr(data-tip); position:absolute;
+    bottom:calc(100% + 6px); left:50%; transform:translateX(-50%);
+    background:var(--surface); color:var(--text);
+    border:1px solid var(--border-dim);
+    font-size:0.55rem; padding:4px 8px;
+    white-space:nowrap; pointer-events:none;
+    opacity:0; transition:opacity 0.15s; z-index:10;
+  }
+  .score-sq:hover::after { opacity:1; }
+  .squares-legend {
+    display:flex; gap:16px; font-family:'Cinzel',serif;
+    font-size:0.55rem; letter-spacing:0.08em;
+    color:var(--text-sub); flex-wrap:wrap; justify-content:center;
+  }
+  .sq-leg { display:flex; align-items:center; gap:5px; }
+  .sq-leg-dot { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+  .end-actions {
+    display:flex; gap:12px; flex-wrap:wrap;
+    justify-content:center; margin-top:4px;
+  }
+  .btn-export {
+    background:transparent; border:1px solid var(--border-dim);
+    color:var(--text-sub); padding:13px 28px;
+    font-family:'Cinzel',serif; font-size:0.6rem;
+    letter-spacing:0.35em; text-transform:uppercase;
+    cursor:pointer; transition:all 0.2s;
+  }
+  .btn-export:hover { border-color:var(--rust); color:var(--rust); }
+
+  /* ── AI FETCH BUTTON on intro ── */
+  .btn-ai {
+    background:transparent; border:1px solid var(--border-dim);
+    color:var(--text-sub); padding:11px 28px;
+    font-family:'Cinzel',serif; font-size:0.58rem;
+    letter-spacing:0.3em; text-transform:uppercase;
+    cursor:pointer; transition:all 0.2s;
+    display:flex; align-items:center; gap:8px;
+  }
+  .btn-ai:hover { border-color:var(--gold); color:var(--gold-bright); }
+  .ai-status {
+    font-family:'Cinzel',serif; font-size:0.55rem;
+    letter-spacing:0.2em; color:var(--text-sub);
+    min-height:1.4em; text-align:center;
+  }
+  .ai-status.ok   { color:var(--correct-tx); }
+  .ai-status.fail { color:var(--wrong-tx); }
+
+  /* Copy toast */
+  .copy-toast {
+    position:fixed; bottom:32px; left:50%;
+    transform:translateX(-50%) translateY(16px);
+    background:var(--surface); border:1px solid var(--border-dim);
+    color:var(--text); padding:10px 24px;
+    font-family:'Cinzel',serif; font-size:0.6rem; letter-spacing:0.2em;
+    z-index:200; opacity:0; transition:opacity 0.3s, transform 0.3s;
+    pointer-events:none;
+  }
+  .copy-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  @media (max-width:480px) {
+    .epochs-grid { grid-template-columns:repeat(2,1fr); }
+    .word-main { font-size:2rem; }
+    .theme-toggle .theme-label { display:none; }
+    .theme-icon { font-size:1.1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="strata" id="strata"></div>
+
+<button class="theme-toggle" id="theme-toggle" aria-label="Changer de thème">
+  <span class="theme-icon" id="theme-icon">☀️</span>
+  <span class="theme-label" id="theme-label">Thème clair</span>
+</button>
+
+<div class="copy-toast" id="copy-toast">Score copié dans le presse-papiers !</div>
+
+<!-- ── INTRO ── -->
+<div class="screen" id="screen-intro">
+  <div class="screen-label">Un jeu d'étymologie</div>
+  <div class="screen-heading">Écho Temporel</div>
+  <div class="screen-body">
+    Chaque mot a une <strong>date de naissance</strong>. Situez-le dans son époque. Attention aux apparences — certains mots semblent modernes et sont très anciens, d'autres paraissent archaïques et sont récents.
+  </div>
+  <div class="epoch-legend">
+    <div class="legend-row">Antiquité        <span>avant 500 ap. J.-C.</span></div>
+    <div class="legend-row">Moyen Âge        <span>500 – 1450</span></div>
+    <div class="legend-row">Renaissance      <span>1450 – 1700</span></div>
+    <div class="legend-row">Ère industrielle <span>1700 – 1900</span></div>
+    <div class="legend-row">XXe siècle       <span>1900 – 1980</span></div>
+    <div class="legend-row">Ère numérique    <span>1980 – aujourd'hui</span></div>
+  </div>
+  <div class="screen-body" style="font-size:0.82rem">
+    <strong>🟢 +100 pts</strong> si juste &nbsp;·&nbsp; <strong>🟡 +50 pts</strong> si adjacent &nbsp;·&nbsp; <strong>🔴 0 pt</strong> sinon · 10 mots
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;max-width:400px">
+    <button class="btn-start" id="btn-intro">Commencer →</button>
+    <button class="btn-ai" id="btn-ai-words">✦ Générer de nouveaux mots avec l'IA</button>
+    <div class="ai-status" id="ai-status"></div>
+  </div>
+</div>
+
+<!-- ── END ── -->
+<div class="screen hidden" id="screen-end">
+  <div class="screen-label">Partie terminée</div>
+  <div class="screen-heading" id="end-title">Chroniqueur</div>
+  <div class="final-score" id="end-score">0</div>
+  <div class="score-squares" id="score-squares"></div>
+  <div class="squares-legend">
+    <div class="sq-leg"><div class="sq-leg-dot" style="background:var(--sq-correct)"></div>Juste (+100)</div>
+    <div class="sq-leg"><div class="sq-leg-dot" style="background:var(--sq-adjacent)"></div>Adjacent (+50)</div>
+    <div class="sq-leg"><div class="sq-leg-dot" style="background:var(--sq-wrong)"></div>Raté (0)</div>
+  </div>
+  <div class="end-actions">
+    <button class="btn-start"  id="btn-restart">Rejouer →</button>
+    <button class="btn-export" id="btn-export">⬡ Partager le score</button>
+  </div>
+</div>
+
+<!-- ── GAME ── -->
+<div class="wrap" id="game-wrap" style="display:none">
+  <header>
+    <div class="logo">Écho Temporel</div>
+    <div class="logo-sub">L'histoire cachée des mots</div>
+    <div class="header-divider"><span class="divider-icon">⧖</span></div>
+  </header>
+
+  <div class="score-bar">
+    <div class="score-bar-item">Mot <span id="round-num">1</span> / <span id="round-total">12</span></div>
+    <div class="score-bar-item">Score <span id="score-val">0</span></div>
+    <div class="score-bar-item">Série <span id="streak-val">0</span> 🔥</div>
+  </div>
+
+  <!-- TIMELINE SUPPRIMÉE comme demandé -->
+
+  <div class="word-card">
+    <div class="round-badge" id="round-badge">I / XII</div>
+    <div class="word-label">Datez ce mot</div>
+    <div class="word-main"  id="word-display">—</div>
+    <div class="word-pos"   id="word-pos"></div>
+  </div>
+
+  <div class="epochs-title">Dans quelle époque ce mot est-il né ?</div>
+  <div class="epochs-grid">
+    <button class="epoch-btn" data-ep="antiquite">Antiquité<span class="ep-date">avant 500</span></button>
+    <button class="epoch-btn" data-ep="medieval">Moyen Âge<span class="ep-date">500 – 1450</span></button>
+    <button class="epoch-btn" data-ep="renaissance">Renaissance<span class="ep-date">1450 – 1700</span></button>
+    <button class="epoch-btn" data-ep="industrie">Ère industrielle<span class="ep-date">1700 – 1900</span></button>
+    <button class="epoch-btn" data-ep="xxe">XXe siècle<span class="ep-date">1900 – 1980</span></button>
+    <button class="epoch-btn" data-ep="internet">Ère numérique<span class="ep-date">1980 →</span></button>
+  </div>
+
+  <div class="ai-loading" id="ai-loading">
+    <div class="spinner"></div>
+    <span>L'IA cherche un nouveau mot…</span>
+  </div>
+
+  <div class="anecdote-card" id="anecdote-card">
+    <div class="anecdote-label">Strate révélée</div>
+    <div class="anecdote-epoch" id="anecdote-epoch"></div>
+    <div class="anecdote-text"  id="anecdote-text"></div>
+  </div>
+
+  <button class="btn-next" id="btn-next">Mot suivant →</button>
+</div>
+
+<script>
+// ─── MOTS INTÉGRÉS (base locale enrichie) ──────────────────────────────────
+const EPOCHS = ['antiquite','medieval','renaissance','industrie','xxe','internet'];
+
+const BASE_WORDS = [
+  // Antiquité
+  { word:'virus',        pos:'nom masculin',    epoch:'antiquite',   anecdote:'Du latin <em>virus</em>, "poison, suc de plante". Utilisé par Virgile et Cicéron. Son sens médical est très ancien — son sens informatique ne date que de <strong>1983</strong>.' },
+  { word:'mélancolie',   pos:'nom féminin',     epoch:'antiquite',   anecdote:'Du grec <em>melankholía</em> — bile noire. Hippocrate croyait que la tristesse venait d\'un excès de "bile noire" (<em>melas</em> + <em>kholē</em>). Un mot vieux de plus de <strong>2 500 ans</strong>.' },
+  { word:'acrobate',     pos:'nom',             epoch:'antiquite',   anecdote:'Du grec <em>akrobatēs</em> — <em>akros</em> (extrémité) + <em>bainō</em> (marcher). Attesté dès le <strong>IVe siècle av. J.-C.</strong> chez les Grecs et les Égyptiens.' },
+  { word:'catastrophe',  pos:'nom féminin',     epoch:'renaissance', anecdote:'Du grec <em>katastrophē</em>, "renversement". Entré en français au <strong>XVIe siècle</strong> pour désigner le dénouement d\'une tragédie — avant de prendre son sens actuel.' },
+  // Moyen Âge
+  { word:'salaire',      pos:'nom masculin',    epoch:'medieval',    anecdote:'Du latin <em>salarium</em>, lié au sel (<em>sal</em>). Apparu en français au <strong>XIIe siècle</strong>. Les légionnaires romains recevaient parfois une allocation en sel.' },
+  { word:'hasard',       pos:'nom masculin',    epoch:'medieval',    anecdote:'De l\'arabe <em>az-zahr</em> (le dé). Arrivé au <strong>XIIIe siècle</strong> via les Croisades. Le mot "hasard" a donc une origine très précise — l\'ironie veut.' },
+  { word:'donjon',       pos:'nom masculin',    epoch:'medieval',    anecdote:'Du latin <em>dominionem</em> (tour du seigneur). La tour maîtresse d\'un château fort. Attesté en français dès le <strong>XIe siècle</strong>.' },
+  { word:'coquette',     pos:'adjectif',        epoch:'renaissance', anecdote:'Diminutif de <em>coq</em>, attesté en <strong>1611</strong>. La femme coquette parade comme un coq. Molière et Corneille l\'ont popularisé.' },
+  { word:'canapé',       pos:'nom masculin',    epoch:'renaissance', anecdote:'Du grec <em>kōnōpeion</em> (lit à moustiquaire). Arrivé en français au <strong>XVIIe siècle</strong>. Les nobles s\'y prélassaient avant que le meuble ne se démocratise.' },
+  { word:'baroque',      pos:'adjectif',        epoch:'renaissance', anecdote:'Du portugais <em>barroco</em> (perle irrégulière). Employé dès le <strong>XVIe siècle</strong> pour désigner ce qui est extravagant, puis le mouvement artistique du même nom.' },
+  // Ère industrielle
+  { word:'dinosaure',    pos:'nom masculin',    epoch:'industrie',   anecdote:'Inventé en <strong>1842</strong> par Richard Owen, du grec <em>deinos</em> (terrible) + <em>sauros</em> (lézard). Les dinosaures existaient avant, mais le mot est du XIXe siècle.' },
+  { word:'fiasco',       pos:'nom masculin',    epoch:'industrie',   anecdote:'De l\'italien <em>far fiasco</em> (faire bouteille). Apparu vers <strong>1820</strong>, issu du théâtre italien où une représentation ratée était une bouteille cassée.' },
+  { word:'spaghetti',    pos:'nom masculin pl.',epoch:'industrie',   anecdote:'De l\'italien <em>spago</em> (ficelle). Le mot entre en français vers <strong>1893</strong>. Les pâtes longues existent depuis des siècles en Italie, mais le mot est tardif.' },
+  { word:'bureaucratie', pos:'nom féminin',     epoch:'industrie',   anecdote:'Inventé par Vincent de Gournay vers <strong>1745</strong>, mêlant le français <em>bureau</em> et le grec <em>kratos</em> (pouvoir). Une invention française pour critiquer… la France.' },
+  { word:'blague',       pos:'nom féminin',     epoch:'industrie',   anecdote:'D\'abord une blague à tabac (XIXe s.), puis une plaisanterie. Attesté vers <strong>1840</strong>, probablement du néerlandais <em>balg</em> (peau souple).' },
+  { word:'photographie', pos:'nom féminin',     epoch:'industrie',   anecdote:'Forgé en <strong>1839</strong> par John Herschel à partir du grec <em>phos</em> (lumière) et <em>graphein</em> (écrire). L\'année même où Daguerre présentait son procédé à l\'Académie.' },
+  { word:'locomotive',   pos:'nom féminin',     epoch:'industrie',   anecdote:'Du latin <em>loco</em> (de place en place) + <em>motivus</em> (qui met en mouvement). Attesté en français dès <strong>1817</strong>, quelques années avant les premiers chemins de fer.' },
+  // XXe siècle
+  { word:'robot',        pos:'nom masculin',    epoch:'xxe',         anecdote:'Apparu en <strong>1920</strong> dans la pièce tchèque <em>R.U.R.</em> de Karel Čapek. Vient du tchèque <em>robota</em>, "travail forcé". Un mot du XXe, pas de la SF moderne.' },
+  { word:'bikini',       pos:'nom masculin',    epoch:'xxe',         anecdote:'Inventé en <strong>1946</strong>, nommé d\'après l\'atoll de Bikini où les États-Unis testèrent la bombe atomique. Le créateur pensait que l\'effet serait aussi "explosif".' },
+  { word:'ordinateur',   pos:'nom masculin',    epoch:'xxe',         anecdote:'Inventé en <strong>1955</strong> par le latiniste Jacques Perret, à la demande d\'IBM France. Vient du latin <em>ordinator</em> (celui qui met en ordre).' },
+  { word:'jazz',         pos:'nom masculin',    epoch:'xxe',         anecdote:'Attesté vers <strong>1913</strong> à La Nouvelle-Orléans. Étymologie débattue — peut-être de l\'argot <em>jasm</em> (énergie). Entré en français dans les années <strong>1920</strong>.' },
+  { word:'radar',        pos:'nom masculin',    epoch:'xxe',         anecdote:'Acronyme anglais de <em>Radio Detection And Ranging</em>, développé pendant la <strong>Seconde Guerre mondiale</strong> (1940). Entré en français dans les années 1950.' },
+  { word:'laser',        pos:'nom masculin',    epoch:'xxe',         anecdote:'Acronyme de <em>Light Amplification by Stimulated Emission of Radiation</em>. Inventé en <strong>1960</strong> par Theodore Maiman. Entré en français dans la foulée.' },
+  { word:'cinéma',       pos:'nom masculin',    epoch:'xxe',         anecdote:'Abréviation de <em>cinématographe</em>, mot forgé par les frères Lumière en <strong>1895</strong> du grec <em>kinema</em> (mouvement) + <em>graphein</em> (écrire).' },
+  // Ère numérique
+  { word:'selfie',       pos:'nom masculin',    epoch:'internet',    anecdote:'Apparu en <strong>2002</strong> sur un forum australien. Élu mot de l\'année 2013 par Oxford. Le concept existait (Rembrandt faisait des autoportraits) mais le mot est numérique.' },
+  { word:'internet',     pos:'nom masculin',    epoch:'internet',    anecdote:'Contraction de <em>interconnected networks</em>. S\'est imposé dans les années <strong>1990</strong> avec le World Wide Web. L\'Académie française a longtemps préféré "la Toile".' },
+  { word:'mème',         pos:'nom masculin',    epoch:'internet',    anecdote:'Mot forgé en <strong>1976</strong> par Richard Dawkins dans <em>Le Gène égoïste</em> (du grec <em>mimème</em>). Son sens numérique d\'image virale s\'est développé dans les années <strong>2000</strong>.' },
+  { word:'podcast',      pos:'nom masculin',    epoch:'internet',    anecdote:'Contraction de <em>iPod</em> et <em>broadcast</em>. Apparu en <strong>2004</strong>, popularisé notamment par le journaliste Ben Hammersley. Entré dans les dictionnaires français vers 2020.' },
+  { word:'emoji',        pos:'nom masculin',    epoch:'internet',    anecdote:'Du japonais <em>e</em> (image) + <em>moji</em> (caractère). Créé en <strong>1999</strong> par Shigetaka Kurita pour NTT DoCoMo. Standardisé par Unicode en 2010.' },
+  { word:'influenceur',  pos:'nom masculin',    epoch:'internet',    anecdote:'Traduction du terme anglais <em>influencer</em>, apparu dans le contexte des réseaux sociaux vers <strong>2010</strong>. Officiellement reconnu par le dictionnaire Robert en 2017.' },
+  // ── 20 nouveaux mots ──
+  // Antiquité
+  { word:'école',        pos:'nom féminin',     epoch:'antiquite',   anecdote:"Du grec <em>skholē</em>, qui signifiait… \"loisir, repos\". Pour les Grecs, s\'instruire était un privilège des oisifs. Attesté en français dès le <strong>XIIe siècle</strong> via le latin <em>schola</em>." },
+  { word:'musée',        pos:'nom masculin',    epoch:'antiquite',   anecdote:'Du grec <em>Mouseion</em>, le temple des Muses. La grande bibliothèque d\'Alexandrie portait ce nom dès le <strong>IIIe siècle av. J.-C.</strong> Le sens actuel de lieu d\'exposition date du XVIIIe siècle.' },
+  { word:'typhon',       pos:'nom masculin',    epoch:'antiquite',   anecdote:'Du grec <em>Typhōn</em>, monstre des vents. Entré en français au <strong>XVIe siècle</strong> via le portugais <em>tufão</em>, lui-même issu de l\'arabe ou du chinois <em>tai fung</em>.' },
+  // Moyen Âge
+  { word:'aubaine',      pos:'nom féminin',     epoch:'medieval',    anecdote:'Désignait au <strong>XIIe siècle</strong> le droit du seigneur à hériter des biens d\'un étranger mort sur ses terres. Ce n\'est qu\'au XVIIe siècle qu\'il prend le sens de "bonne fortune".' },
+  { word:'bagage',       pos:'nom masculin',    epoch:'medieval',    anecdote:'Du vieux nordique <em>baggi</em> (paquet). Entré en français au <strong>XIVe siècle</strong> dans un contexte militaire — les bagages désignaient l\'équipement d\'une armée en marche.' },
+  { word:'cabaret',      pos:'nom masculin',    epoch:'medieval',    anecdote:'Du picard <em>cambrette</em> (petite chambre). Attesté dès <strong>1275</strong> pour désigner une taverne. La notion de spectacle n\'y est associée qu\'à partir du XIXe siècle.' },
+  { word:'macabre',      pos:'adjectif',        epoch:'medieval',    anecdote:'De l\'expression "danse Macabré" attestée en <strong>1376</strong>, représentation médiévale de la mort emportant toutes les classes sociales. L\'origine exacte du nom reste mystérieuse.' },
+  // Renaissance
+  { word:'atlas',        pos:'nom masculin',    epoch:'renaissance', anecdote:'Du Titan grec <em>Atlas</em>, condamné à porter le ciel. Gérard Mercator l\'utilisa comme titre de son recueil de cartes en <strong>1595</strong>, fixant le terme pour toujours.' },
+  { word:'banqueroute',  pos:'nom féminin',     epoch:'renaissance', anecdote:'De l\'italien <em>banca rotta</em> (banc cassé). À Florence au <strong>XVIe siècle</strong>, on brisait rituellement le banc d\'un changeur qui ne pouvait plus payer ses dettes.' },
+  { word:'carnaval',     pos:'nom masculin',    epoch:'renaissance', anecdote:'Du latin médiéval <em>carne vale</em> (adieu à la viande), annonçant le Carême. Attesté en français au <strong>XVIe siècle</strong>, via l\'italien <em>carnevale</em>.' },
+  // Ère industrielle
+  { word:'brochure',     pos:'nom féminin',     epoch:'industrie',   anecdote:'Dérivé de <em>brocher</em> (coudre grossièrement). Attesté vers <strong>1750</strong> pour désigner un petit livre cousu sans couverture rigide — avant l\'ère de l\'imprimerie de masse.' },
+  { word:'gare',         pos:'nom féminin',     epoch:'industrie',   anecdote:'Ellipse de "gare d\'eau" (bassin pour péniches), puis appliquée aux chemins de fer dès <strong>1827</strong>. Le mot vient de l\'interjection "gare !" (attention), du francique <em>waron</em>.' },
+  { word:'complot',      pos:'nom masculin',    epoch:'medieval',    anecdote:'Probablement du vieux français <em>pelote</em> (boule embrouillée). Attesté dès le <strong>XIVe siècle</strong> mais popularisé au XIXe avec les conspirations politiques romantiques.' },
+  { word:'cabine',       pos:'nom féminin',     epoch:'industrie',   anecdote:'De l\'anglais <em>cabin</em>, lui-même du latin <em>capanna</em> (hutte). Entré dans le vocabulaire maritime français vers <strong>1680</strong>, puis étendu aux compartiments de train dès le XIXe.' },
+  // XXe siècle
+  { word:'caddie',       pos:'nom masculin',    epoch:'xxe',         anecdote:'De l\'anglais <em>caddy</em> (porteur de clubs). Le chariot de supermarché fut inventé en <strong>1937</strong> par Sylvan Goldman à Oklahoma City. En France, Caddie est une marque devenue nom commun.' },
+  { word:'frigidaire',   pos:'nom masculin',    epoch:'xxe',         anecdote:'Nom de marque américaine déposé en <strong>1919</strong> par General Motors. Tellement populaire en France que le mot est devenu synonyme de réfrigérateur, éclipsant même "frigo".' },
+  { word:'transistor',   pos:'nom masculin',    epoch:'xxe',         anecdote:'Contraction de <em>transfer resistor</em>. Inventé en <strong>1947</strong> par Shockley, Bardeen et Brattain aux Bell Labs. Il a rendu possible toute l\'électronique moderne.' },
+  // Ère numérique
+  { word:'courriel',     pos:'nom masculin',    epoch:'internet',    anecdote:'Mot-valise franco-québécois formé de "courrier" et "électronique", proposé par l\'Office québécois de la langue française en <strong>1997</strong> pour remplacer l\'anglicisme "e-mail".' },
+  { word:'wifi',         pos:'nom masculin',    epoch:'internet',    anecdote:'Contraction fantaisiste de <em>Wireless Fidelity</em>, inventée par une agence de marketing en <strong>1999</strong>. La technologie existait avant le nom — qui ne veut techniquement rien dire.' },
+  { word:'hashtag',      pos:'nom masculin',    epoch:'internet',    anecdote:'Contraction de l\'anglais <em>hash</em> (dièse) et <em>tag</em> (étiquette). Proposé sur Twitter par Chris Messina en <strong>2007</strong> pour regrouper les conversations. Entré dans le Larousse en 2013.' },
+];
+
+// ─── STATE ─────────────────────────────────────────────────────────────────
+const TOTAL = 10;
+let wordPool = [...BASE_WORDS];
+let aiWordsLoaded = false;
+let state = { score:0, round:0, streak:0, wordList:[], answered:false, breakdown:[] };
+
+function shuffle(a){ const b=[...a]; for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];} return b; }
+
+function adjacentScore(chosen, correct){
+  const ci=EPOCHS.indexOf(correct), gi=EPOCHS.indexOf(chosen);
+  if(ci===gi) return 100;
+  if(Math.abs(ci-gi)===1) return 50;
+  return 0;
+}
+
+function romanNumeral(n){
+  return (['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'])[n-1]||n;
+}
+
+// ─── THEME ─────────────────────────────────────────────────────────────────
+let currentTheme = 'dark';
+function applyTheme(t){
+  currentTheme=t;
+  document.documentElement.setAttribute('data-theme',t);
+  document.getElementById('theme-icon').textContent  = t==='dark'?'☀️':'🌙';
+  document.getElementById('theme-label').textContent = t==='dark'?'Thème clair':'Thème sombre';
+}
+document.getElementById('theme-toggle').addEventListener('click',()=>applyTheme(currentTheme==='dark'?'light':'dark'));
+
+// ─── STRATA ────────────────────────────────────────────────────────────────
+function buildStrata(){
+  const s=document.getElementById('strata'); s.innerHTML='';
+  for(let i=0;i<30;i++){
+    const d=document.createElement('div');
+    d.className='strata-line';
+    d.style.marginTop=(80+i*32)+'px';
+    s.appendChild(d);
+  }
+}
+
+// ─── AI WORD GENERATION ────────────────────────────────────────────────────
+async function fetchAIWords(){
+  const btn  = document.getElementById('btn-ai-words');
+  const status = document.getElementById('ai-status');
+  btn.disabled = true;
+  status.className = 'ai-status';
+  status.textContent = '✦ Connexion à l\'IA en cours…';
+
+  const prompt = `Tu es un expert en étymologie française. Génère exactement 10 mots français intéressants à dater, avec pour chacun une anecdote étymologique surprenante.
+
+Réponds UNIQUEMENT avec un JSON valide, sans markdown, sans texte autour, sous ce format exact :
+[
+  {
+    "word": "mot",
+    "pos": "nature grammaticale",
+    "epoch": "une de ces valeurs exactes: antiquite | medieval | renaissance | industrie | xxe | internet",
+    "anecdote": "texte HTML court (balises <strong> et <em> autorisées), 2-3 phrases max, mentionnant la date précise en <strong>année</strong>"
+  }
+]
+
+Règles :
+- Choisis des mots vraiment surprenants (apparence trompeuse : semblent modernes mais sont anciens, ou vice-versa)
+- Répartis équitablement entre les 6 époques
+- Les anecdotes doivent mentionner une année précise en gras
+- Pas de mots déjà très connus comme "robot" ou "selfie"
+- Mots uniquement en français`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if(!resp.ok) throw new Error('Erreur réseau');
+    const data = await resp.json();
+    const raw  = data.content?.find(c=>c.type==='text')?.text || '';
+    // Strip possible markdown fences
+    const clean = raw.replace(/```json|```/gi,'').trim();
+    const words = JSON.parse(clean);
+
+    if(!Array.isArray(words) || words.length === 0) throw new Error('Format inattendu');
+
+    // Validate and add to pool
+    const valid = words.filter(w =>
+      w.word && w.pos && EPOCHS.includes(w.epoch) && w.anecdote
+    );
+
+    if(valid.length === 0) throw new Error('Aucun mot valide');
+
+    // Avoid duplicates
+    const existing = new Set(wordPool.map(w=>w.word.toLowerCase()));
+    const newWords = valid.filter(w=>!existing.has(w.word.toLowerCase()));
+    wordPool = [...wordPool, ...newWords];
+    aiWordsLoaded = true;
+
+    status.className = 'ai-status ok';
+    status.textContent = `✓ ${newWords.length} nouveaux mots ajoutés (total : ${wordPool.length})`;
+    btn.textContent = '✦ Générer encore';
+    btn.disabled = false;
+
+  } catch(err) {
+    status.className = 'ai-status fail';
+    status.textContent = '✗ Génération impossible — les mots locaux seront utilisés';
+    btn.disabled = false;
+    console.error(err);
+  }
+}
+
+// ─── HUD ───────────────────────────────────────────────────────────────────
+function renderHUD(){
+  document.getElementById('round-num').textContent   = state.round+1;
+  document.getElementById('round-total').textContent = TOTAL;
+  document.getElementById('score-val').textContent   = state.score;
+  document.getElementById('streak-val').textContent  = state.streak;
+  document.getElementById('round-badge').textContent = romanNumeral(state.round+1)+' / '+romanNumeral(TOTAL);
+}
+
+function renderWord(entry){
+  document.getElementById('word-display').textContent = entry.word;
+  document.getElementById('word-pos').textContent     = entry.pos;
+  document.getElementById('anecdote-card').classList.remove('show');
+  document.getElementById('btn-next').classList.remove('show');
+  document.getElementById('ai-loading').classList.remove('show');
+  document.querySelectorAll('.epoch-btn').forEach(b=>{ b.className='epoch-btn'; b.disabled=false; });
+}
+
+// ─── GAME FLOW ─────────────────────────────────────────────────────────────
+function startGame(){
+  state.score=0; state.round=0; state.streak=0; state.breakdown=[];
+  state.wordList = shuffle(wordPool).slice(0, TOTAL);
+  document.getElementById('screen-intro').classList.add('hidden');
+  document.getElementById('screen-end').classList.add('hidden');
+  document.getElementById('game-wrap').style.display='block';
+  renderHUD();
+  loadRound();
+}
+
+function loadRound(){
+  state.answered=false;
+  renderHUD();
+  renderWord(state.wordList[state.round]);
+}
+
+function answer(chosen){
+  if(state.answered) return;
+  state.answered=true;
+  const entry=state.wordList[state.round];
+  const pts=adjacentScore(chosen,entry.epoch);
+  const correct=(chosen===entry.epoch);
+  const adjacent=(pts===50);
+
+  if(correct) state.streak++; else state.streak=0;
+  const bonus=state.streak>=3?20:0;
+  state.score+=pts+bonus;
+  state.breakdown.push({word:entry.word,epoch:entry.epoch,chosen,pts:pts+bonus,result:correct?'correct':adjacent?'adjacent':'wrong'});
+
+  document.querySelectorAll('.epoch-btn').forEach(b=>{
+    b.disabled=true;
+    if(b.dataset.ep===entry.epoch) b.classList.add(correct?'correct':'revealed');
+    else if(b.dataset.ep===chosen && !correct) b.classList.add('wrong');
+  });
+
+  const epochNames={
+    antiquite:'Antiquité (av. 500)',medieval:'Moyen Âge (500–1450)',
+    renaissance:'Renaissance (1450–1700)',industrie:'Ère industrielle (1700–1900)',
+    xxe:'XXe siècle (1900–1980)',internet:'Ère numérique (1980→)'
+  };
+  document.getElementById('anecdote-epoch').textContent = epochNames[entry.epoch]+(bonus?' · +'+bonus+' pts (série !)':'');
+  document.getElementById('anecdote-text').innerHTML    = entry.anecdote;
+  document.getElementById('anecdote-card').classList.add('show');
+  document.getElementById('btn-next').classList.add('show');
+  renderHUD();
+}
+
+function nextRound(){
+  state.round++;
+  if(state.round>=TOTAL) endGame(); else loadRound();
+}
+
+// ─── END SCREEN ────────────────────────────────────────────────────────────
+function endGame(){
+  document.getElementById('game-wrap').style.display='none';
+  document.getElementById('screen-end').classList.remove('hidden');
+
+  const pct=state.score/(TOTAL*100);
+  document.getElementById('end-title').textContent =
+    pct>=0.85?'Archiviste du temps':pct>=0.6?'Chroniqueur':pct>=0.35?'Apprenti historien':'Perdu dans les âges';
+  document.getElementById('end-score').textContent = state.score;
+
+  const container=document.getElementById('score-squares');
+  container.innerHTML='';
+  state.breakdown.forEach((r,i)=>{
+    const div=document.createElement('div');
+    div.className='score-sq sq-'+r.result;
+    div.setAttribute('data-tip',r.word+' — '+(r.pts>0?'+'+r.pts+' pts':'raté'));
+    div.style.animationDelay=(i*55)+'ms';
+    div.textContent=r.pts>0?'+'+r.pts:'✗';
+    container.appendChild(div);
+  });
+}
+
+// ─── EXPORT ────────────────────────────────────────────────────────────────
+function exportScore(){
+  const today=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const pct=state.score/(TOTAL*100);
+  const title=pct>=0.85?'Archiviste du temps':pct>=0.6?'Chroniqueur':pct>=0.35?'Apprenti historien':'Perdu dans les âges';
+  const sqMap={correct:'🟢',adjacent:'🟡',wrong:'🔴'};
+  const squares=state.breakdown.map(r=>sqMap[r.result]).join('');
+  const text=`⧖ Écho Temporel — ${today}\n${title}  ·  ${state.score} pts\n\n${squares}\n\n🟢 Juste   🟡 Adjacent   🔴 Raté`;
+
+  if(navigator.clipboard?.writeText){
+    navigator.clipboard.writeText(text).then(showToast).catch(()=>fallback(text));
+  } else { fallback(text); }
+}
+
+function fallback(text){
+  const ta=document.createElement('textarea');
+  ta.value=text; ta.style.cssText='position:fixed;opacity:0';
+  document.body.appendChild(ta); ta.select();
+  document.execCommand('copy'); document.body.removeChild(ta);
+  showToast();
+}
+
+function showToast(){
+  const t=document.getElementById('copy-toast');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ─── EVENTS ────────────────────────────────────────────────────────────────
+document.getElementById('btn-intro').addEventListener('click', startGame);
+document.getElementById('btn-restart').addEventListener('click', startGame);
+document.getElementById('btn-next').addEventListener('click', nextRound);
+document.getElementById('btn-export').addEventListener('click', exportScore);
+document.getElementById('btn-ai-words').addEventListener('click', fetchAIWords);
+document.querySelectorAll('.epoch-btn').forEach(b=>{
+  b.addEventListener('click', ()=>answer(b.dataset.ep));
+});
+
+buildStrata();
+</script>
+</body>
+</html>

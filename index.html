@@ -842,8 +842,9 @@ function exportScore(saveData) {
   const today = new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric' });
   const sqMap = { correct:'🟢', adjacent:'🟡', wrong:'🔴' };
   const squares = bd.map(r => sqMap[r.result]).join('');
-  const text = `⧖ Écho Temporel — ${today}\n${scoreTitle(sc)}  ·  ${sc} pts\n\n${squares}\n\n🟢 Juste   🟡 Adjacent   🔴 Raté\n${GAME_URL}`;
-
+  //const text = `⧖ Écho Temporel — ${today}\n${scoreTitle(sc)}  ·  ${sc} pts\n\n${squares}\n\n🟢 Juste   🟡 Adjacent   🔴 Raté\n${GAME_URL}`;
+  const text = `⧖ Écho Temporel — ${today}\n${scoreTitle(sc)}  ·  ${sc} pts\n\n${squares}\n\n${GAME_URL}`;
+	
   if (navigator.clipboard?.writeText) {
     navigator.clipboard.writeText(text).then(showToast).catch(() => fallback(text));
   } else { fallback(text); }

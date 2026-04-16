@@ -38,6 +38,8 @@
   }
 
   * { margin:0; padding:0; box-sizing:border-box; }
+  
+  .hidden { display: none !important; }
 
   body {
     min-height: 100vh;
@@ -347,7 +349,7 @@
     <div class="sq-leg"><div class="sq-leg-dot" style="background:var(--sq-wrong)"></div>Raté (0)</div>
   </div>
   <div class="screen-body" style="font-size:0.82rem">
-    Revenez demain pour un nouveau tirage !
+    Revenez demain pour un nouveau tirage ou testez le mode infini !
   </div>
   <div class="end-actions" style="margin-top:8px">
     <button class="btn-export"    id="btn-export-already">⬡ Partager le score</button>
@@ -367,7 +369,8 @@
     <div class="sq-leg"><div class="sq-leg-dot" style="background:var(--sq-wrong)"></div>Raté (0)</div>
   </div>
   <div class="end-actions">
-    <button class="btn-export" id="btn-export">⬡ Partager le score</button>
+    <button class="btn-export"   id="btn-export">⬡ Partager le score</button>
+    <button class="btn-infinite" id="btn-infinite-end">∞ Mode infini</button>
   </div>
 </div>
 
@@ -379,7 +382,7 @@
     <div class="header-divider"><span class="divider-icon">⧖</span></div>
   </header>
 
-  <div class="score-bar" id="score-bar-normal">
+  <div class="score-bar hidden" id="score-bar-normal">
     <div class="score-bar-item">Mot <span id="round-num">1</span> / <span id="round-total">10</span></div>
     <div class="score-bar-item">Score <span id="score-val">0</span></div>
     <div class="score-bar-item">Série <span id="streak-val">0</span> 🔥</div>
@@ -878,12 +881,16 @@ document.getElementById('btn-export').addEventListener('click', () => exportScor
 
 // Boutons mode infini
 document.getElementById('btn-infinite-intro').addEventListener('click', () => startInfinite([]));
-document.getElementById('btn-infinite-already').addEventListener('click', () => {
+
+function startInfiniteFromSave() {
   let save = null;
   try { save = JSON.parse(localStorage.getItem(todayKey())); } catch(e) {}
   const seenWords = save ? save.breakdown.map(b => ({ word: b.word })) : [];
   startInfinite(seenWords);
-});
+}
+
+document.getElementById('btn-infinite-already').addEventListener('click', startInfiniteFromSave);
+document.getElementById('btn-infinite-end').addEventListener('click', startInfiniteFromSave);
 document.getElementById('btn-stop-infinite').addEventListener('click', stopInfinite);
 
 // Bouton partage depuis écran "déjà joué"

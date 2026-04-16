@@ -264,6 +264,42 @@
   }
   .copy-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
+  /* ── MODE INFINI ── */
+  .inf-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface-mid); border: 1px solid var(--gold);
+    color: var(--gold); padding: 4px 12px;
+    font-family:'Cinzel',serif; font-size:0.55rem; letter-spacing:0.3em;
+    text-transform: uppercase; border-radius: 2px;
+  }
+  .btn-infinite {
+    background:transparent; border:1px solid var(--border-dim);
+    color:var(--text-sub); padding:12px 28px;
+    font-family:'Cinzel',serif; font-size:0.6rem;
+    letter-spacing:0.4em; text-transform:uppercase;
+    cursor:pointer; transition:all 0.2s;
+  }
+  .btn-infinite:hover { border-color:var(--gold); color:var(--gold-bright); }
+  .btn-stop-infinite {
+    background:transparent; border:1px solid var(--border-dim);
+    color:var(--text-sub); padding:10px 20px;
+    font-family:'Cinzel',serif; font-size:0.55rem;
+    letter-spacing:0.35em; text-transform:uppercase;
+    cursor:pointer; transition:all 0.2s;
+  }
+  .btn-stop-infinite:hover { border-color:var(--wrong-bd); color:var(--wrong-tx); }
+  /* Barre de score mode infini */
+  .inf-stats {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 20px;
+    background: var(--surface-mid); border: 1px solid var(--gold);
+    margin-bottom:16px;
+    font-family:'Cinzel',serif; font-size:0.6rem; letter-spacing:0.2em;
+    animation: fadeUp 0.3s ease;
+  }
+  .inf-stats-item { color:var(--text-sub); }
+  .inf-stats-item span { color:var(--gold-bright); }
+
   @media (max-width:480px) {
     .epochs-grid { grid-template-columns:repeat(2,1fr); }
     .word-main { font-size:2rem; }
@@ -295,6 +331,7 @@
 	 10 mots · un nouveau tirage chaque jour
   </div>
   <button class="btn-start" id="btn-intro">Commencer →</button>
+  <button class="btn-infinite" id="btn-infinite-intro">∞ Mode infini</button>
 </div>
 
 <!-- ── DÉJÀ JOUÉ ── -->
@@ -312,7 +349,10 @@
   <div class="screen-body" style="font-size:0.82rem">
     Revenez demain pour un nouveau tirage !
   </div>
-  <button class="btn-export" id="btn-export-already" style="margin-top:8px">⬡ Partager le score</button>
+  <div class="end-actions" style="margin-top:8px">
+    <button class="btn-export"    id="btn-export-already">⬡ Partager le score</button>
+    <button class="btn-infinite"  id="btn-infinite-already">∞ Mode infini</button>
+  </div>
 </div>
 
 <!-- ── END ── -->
@@ -339,14 +379,22 @@
     <div class="header-divider"><span class="divider-icon">⧖</span></div>
   </header>
 
-  <div class="score-bar">
+  <div class="score-bar" id="score-bar-normal">
     <div class="score-bar-item">Mot <span id="round-num">1</span> / <span id="round-total">10</span></div>
     <div class="score-bar-item">Score <span id="score-val">0</span></div>
     <div class="score-bar-item">Série <span id="streak-val">0</span> 🔥</div>
   </div>
+  <div class="inf-stats hidden" id="score-bar-infinite">
+    <div class="inf-stats-item"><span class="inf-badge">∞ Infini</span></div>
+    <div class="inf-stats-item">Mots <span id="inf-count">0</span></div>
+    <div class="inf-stats-item">Score <span id="inf-score">0</span></div>
+    <div class="inf-stats-item">Série <span id="inf-streak">0</span> 🔥</div>
+    <button class="btn-stop-infinite" id="btn-stop-infinite">✕ Arrêter</button>
+  </div>
 
   <div class="word-card">
     <div class="round-badge" id="round-badge">I / X</div>
+    <div class="round-badge" id="inf-badge-card" style="display:none;left:16px;right:auto;color:var(--gold)">∞</div>
     <div class="word-label">Datez ce mot</div>
     <div class="word-main"  id="word-display">—</div>
     <div class="word-pos"   id="word-pos"></div>
@@ -385,13 +433,6 @@ const BASE_WORDS = [
   { word:'école',        pos:'nom féminin',     epoch:'antiquite',   anecdote:'Du grec <em>skholē</em>, qui signifiait "loisir, repos". Pour les Grecs, s\'instruire était un privilège des oisifs. Attesté en français dès le <strong>XIIe siècle</strong> via le latin <em>schola</em>.' },
   { word:'musée',        pos:'nom masculin',    epoch:'antiquite',   anecdote:'Du grec <em>Mouseion</em>, le temple des Muses. La bibliothèque d\'Alexandrie portait ce nom dès le <strong>IIIe siècle av. J.-C.</strong> Le sens actuel de lieu d\'exposition date du XVIIIe siècle.' },
   { word:'typhon',       pos:'nom masculin',    epoch:'antiquite',   anecdote:'Du grec <em>Typhōn</em>, monstre des vents. Entré en français au <strong>XVIe siècle</strong> via le portugais <em>tufão</em>, lui-même issu de l\'arabe ou du chinois <em>tai fung</em>.' },
-  { word:'ironie',       pos:'nom féminin',     epoch:'antiquite',   anecdote:'Du grec <em>eirōneia</em> (feinte ignorance). Socrate en avait fait une méthode philosophique au <strong>Ve siècle av. J.-C.</strong> — il prétendait ne rien savoir pour mieux déstabiliser ses interlocuteurs.' },
-  { word:'géographie',   pos:'nom féminin',     epoch:'antiquite',   anecdote:'Du grec <em>geōgraphia</em> — <em>gê</em> (terre) + <em>graphein</em> (décrire). Inventé par Ératosthène au <strong>IIIe siècle av. J.-C.</strong>, le premier à avoir mesuré la circonférence de la Terre.' },
-  { word:'athlète',      pos:'nom',             epoch:'antiquite',   anecdote:'Du grec <em>athlētēs</em> (celui qui concourt pour un prix). Les Jeux olympiques antiques datent de <strong>776 av. J.-C.</strong> Le mot est entré en français au XVIe siècle via le latin.' },
-  { word:'philosophie',  pos:'nom féminin',     epoch:'antiquite',   anecdote:'Du grec <em>philosophia</em> — <em>philos</em> (ami) + <em>sophia</em> (sagesse). Pythagore aurait été le premier à se qualifier de <em>philosophos</em> au <strong>VIe siècle av. J.-C.</strong>' },
-  { word:'démocratie',   pos:'nom féminin',     epoch:'antiquite',   anecdote:'Du grec <em>dēmokratia</em> — <em>dêmos</em> (peuple) + <em>kratos</em> (pouvoir). Inventée à Athènes par Clisthène vers <strong>508 av. J.-C.</strong> Le mot entre en français au XVIe siècle.' },
-  { word:'catastrophe',  pos:'nom féminin',     epoch:'antiquite',   anecdote:'Du grec <em>katastrophē</em> (renversement). Utilisé par Aristote dès le <strong>IVe siècle av. J.-C.</strong> pour le retournement final d\'une tragédie, bien avant son sens actuel de désastre.' },
-
   // Moyen Âge
   { word:'salaire',      pos:'nom masculin',    epoch:'medieval',    anecdote:'Du latin <em>salarium</em>, lié au sel (<em>sal</em>). Apparu en français au <strong>XIIe siècle</strong>. Les légionnaires romains recevaient parfois une allocation en sel.' },
   { word:'hasard',       pos:'nom masculin',    epoch:'medieval',    anecdote:'De l\'arabe <em>az-zahr</em> (le dé). Arrivé au <strong>XIIIe siècle</strong> via les Croisades. Le mot "hasard" a donc une origine très précise — l\'ironie veut.' },
@@ -401,11 +442,6 @@ const BASE_WORDS = [
   { word:'cabaret',      pos:'nom masculin',    epoch:'medieval',    anecdote:'Du picard <em>cambrette</em> (petite chambre). Attesté dès <strong>1275</strong> pour désigner une taverne. La notion de spectacle n\'y est associée qu\'à partir du XIXe siècle.' },
   { word:'macabre',      pos:'adjectif',        epoch:'medieval',    anecdote:'De l\'expression "danse Macabré" attestée en <strong>1376</strong>, représentation médiévale de la mort emportant toutes les classes sociales. L\'origine exacte du nom reste mystérieuse.' },
   { word:'complot',      pos:'nom masculin',    epoch:'medieval',    anecdote:'Probablement du vieux français <em>pelote</em> (boule embrouillée). Attesté dès le <strong>XIVe siècle</strong> mais popularisé au XIXe avec les conspirations politiques romantiques.' },
-  { word:'vitrail',      pos:'nom masculin',    epoch:'medieval',    anecdote:'De <em>vitre</em>, du latin <em>vitrum</em> (verre). L\'art du vitrail s\'est épanoui dans les cathédrales gothiques à partir du <strong>XIIe siècle</strong>. La rose de Notre-Dame date de 1250.' },
-  { word:'jongleur',     pos:'nom masculin',    epoch:'medieval',    anecdote:'Du latin <em>joculatorem</em> (bouffon). Les jongleurs médiévaux chantaient, contaient et jouaient de la musique dans les cours dès le <strong>XIe siècle</strong> — bien plus que de simples acrobates.' },
-  { word:'bazar',        pos:'nom masculin',    epoch:'medieval',    anecdote:'Du persan <em>bāzār</em> (marché). Entré en français au <strong>XVIe siècle</strong> via le turc et l\'arabe, par les voies de la Route de la Soie. Son sens de "désordre" est bien plus tardif.' },
-  { word:'héraut',       pos:'nom masculin',    epoch:'medieval',    anecdote:'Du francique <em>hariwald</em> (chef d\'armée). Envoyé officiel entre armées ennemies dès le <strong>XIIe siècle</strong>, il est à l\'origine de l\'héraldique — l\'art des blasons.' },
-
   // Renaissance
   { word:'catastrophe',  pos:'nom féminin',     epoch:'renaissance', anecdote:'Du grec <em>katastrophē</em>, "renversement". Entré en français au <strong>XVIe siècle</strong> pour désigner le dénouement d\'une tragédie — avant de prendre son sens actuel.' },
   { word:'coquette',     pos:'adjectif',        epoch:'renaissance', anecdote:'Diminutif de <em>coq</em>, attesté en <strong>1611</strong>. La femme coquette parade comme un coq. Molière et Corneille l\'ont popularisé.' },
@@ -414,12 +450,6 @@ const BASE_WORDS = [
   { word:'atlas',        pos:'nom masculin',    epoch:'renaissance', anecdote:'Du Titan grec <em>Atlas</em>, condamné à porter le ciel. Gérard Mercator l\'utilisa comme titre de son recueil de cartes en <strong>1595</strong>, fixant le terme pour toujours.' },
   { word:'banqueroute',  pos:'nom féminin',     epoch:'renaissance', anecdote:'De l\'italien <em>banca rotta</em> (banc cassé). À Florence au <strong>XVIe siècle</strong>, on brisait rituellement le banc d\'un changeur qui ne pouvait plus payer ses dettes.' },
   { word:'carnaval',     pos:'nom masculin',    epoch:'renaissance', anecdote:'Du latin médiéval <em>carne vale</em> (adieu à la viande), annonçant le Carême. Attesté en français au <strong>XVIe siècle</strong>, via l\'italien <em>carnevale</em>.' },
-  { word:'gazette',      pos:'nom féminin',     epoch:'renaissance', anecdote:'Du vénitien <em>gazeta</em>, petite pièce de monnaie qui était le prix d\'un feuillet d\'information à Venise au <strong>XVIe siècle</strong>. La première gazette française date de 1631.' },
-  { word:'bibliothèque', pos:'nom féminin',     epoch:'renaissance', anecdote:'Du grec <em>bibliothēkē</em> — <em>biblion</em> (livre) + <em>thēkē</em> (coffre). Entré en français au <strong>XVe siècle</strong>. La première bibliothèque publique française ouvre à Paris en 1537, sur ordre de François Ier.' },
-  { word:'manuscrit',    pos:'nom masculin',    epoch:'renaissance', anecdote:'Du latin <em>manu scriptum</em> (écrit à la main). Le mot prend son sens plein avec l\'invention de l\'imprimerie par Gutenberg vers <strong>1450</strong> — pour distinguer les livres copiés des livres imprimés.' },
-  { word:'silhouette',   pos:'nom féminin',     epoch:'renaissance', anecdote:'Du nom d\'Étienne de Silhouette, ministre des finances de Louis XV réputé pour son avarice. Ses portraits "à l\'économie" — sans couleur ni détail — ont donné le mot vers <strong>1759</strong>.' },
-  { word:'charlatan',    pos:'nom masculin',    epoch:'renaissance', anecdote:'De l\'italien <em>ciarlatano</em> (bavard de foire). Les charlatans italiens vendaient leurs remèdes sur les places publiques dès le <strong>XVIe siècle</strong>. Le mot entre en français vers 1580.' },
- 
   // Ère industrielle
   { word:'dinosaure',    pos:'nom masculin',    epoch:'industrie',   anecdote:'Inventé en <strong>1842</strong> par Richard Owen, du grec <em>deinos</em> (terrible) + <em>sauros</em> (lézard). Les dinosaures existaient avant, mais le mot est du XIXe siècle.' },
   { word:'fiasco',       pos:'nom masculin',    epoch:'industrie',   anecdote:'De l\'italien <em>far fiasco</em> (faire bouteille). Apparu vers <strong>1820</strong>, issu du théâtre italien où une représentation ratée était une bouteille cassée.' },
@@ -431,9 +461,6 @@ const BASE_WORDS = [
   { word:'brochure',     pos:'nom féminin',     epoch:'industrie',   anecdote:'Dérivé de <em>brocher</em> (coudre grossièrement). Attesté vers <strong>1750</strong> pour désigner un petit livre cousu sans couverture rigide.' },
   { word:'gare',         pos:'nom féminin',     epoch:'industrie',   anecdote:'Ellipse de "gare d\'eau" (bassin pour péniches), appliquée aux chemins de fer dès <strong>1827</strong>. Du francique <em>waron</em> via l\'interjection "gare !" (attention).' },
   { word:'cabine',       pos:'nom féminin',     epoch:'industrie',   anecdote:'De l\'anglais <em>cabin</em>, lui-même du latin <em>capanna</em> (hutte). Entré dans le vocabulaire maritime français vers <strong>1680</strong>, puis étendu aux trains dès le XIXe.' },
-  { word:'télégraphe',   pos:'nom masculin',    epoch:'industrie',   anecdote:'Du grec <em>têle</em> (loin) + <em>graphein</em> (écrire). Inventé par Claude Chappe en <strong>1794</strong> sous forme optique, puis électrique par Morse en 1837. Une révolution dans la communication.' },
-  { word:'savant',       pos:'nom masculin',    epoch:'industrie',   anecdote:'Participe présent de <em>savoir</em>, devenu nom au XVIIe siècle. Mais c\'est au <strong>XIXe siècle</strong>, avec la professionnalisation de la science, qu\'il prend son sens moderne de "scientifique".' },
-
   // XXe siècle
   { word:'robot',        pos:'nom masculin',    epoch:'xxe',         anecdote:'Apparu en <strong>1920</strong> dans la pièce tchèque <em>R.U.R.</em> de Karel Čapek. Vient du tchèque <em>robota</em>, "travail forcé". Un mot du XXe, pas de la SF moderne.' },
   { word:'bikini',       pos:'nom masculin',    epoch:'xxe',         anecdote:'Inventé en <strong>1946</strong>, nommé d\'après l\'atoll de Bikini où les États-Unis testèrent la bombe atomique. Le créateur pensait que l\'effet serait aussi "explosif".' },
@@ -445,9 +472,6 @@ const BASE_WORDS = [
   { word:'caddie',       pos:'nom masculin',    epoch:'xxe',         anecdote:'De l\'anglais <em>caddy</em> (porteur de clubs). Le chariot de supermarché fut inventé en <strong>1937</strong> par Sylvan Goldman à Oklahoma City. En France, Caddie est une marque devenue nom commun.' },
   { word:'frigidaire',   pos:'nom masculin',    epoch:'xxe',         anecdote:'Nom de marque américaine déposé en <strong>1919</strong> par General Motors. Tellement populaire en France que le mot est devenu synonyme de réfrigérateur.' },
   { word:'transistor',   pos:'nom masculin',    epoch:'xxe',         anecdote:'Contraction de <em>transfer resistor</em>. Inventé en <strong>1947</strong> par Shockley, Bardeen et Brattain aux Bell Labs. Il a rendu possible toute l\'électronique moderne.' },
-  { word:'aéroport',     pos:'nom masculin',    epoch:'xxe',         anecdote:'Du latin <em>aer</em> (air) + grec <em>portos</em> (port). Forgé en <strong>1929</strong> en France pour désigner les nouveaux terminaux de l\'aviation commerciale, calqué sur "port maritime".' },
-  { word:'plastique',    pos:'nom masculin',    epoch:'xxe',         anecdote:'Du grec <em>plastikos</em> (qui peut être modelé). Le premier plastique de synthèse, la Bakélite, est inventé en <strong>1907</strong>. Le mot prend son sens actuel dans les années <strong>1920</strong>.' },
-
   // Ère numérique
   { word:'selfie',       pos:'nom masculin',    epoch:'internet',    anecdote:'Apparu en <strong>2002</strong> sur un forum australien. Élu mot de l\'année 2013 par Oxford. Le concept existait (Rembrandt faisait des autoportraits) mais le mot est numérique.' },
   { word:'internet',     pos:'nom masculin',    epoch:'internet',    anecdote:'Contraction de <em>interconnected networks</em>. S\'est imposé dans les années <strong>1990</strong> avec le World Wide Web. L\'Académie a longtemps préféré "la Toile".' },
@@ -458,6 +482,32 @@ const BASE_WORDS = [
   { word:'courriel',     pos:'nom masculin',    epoch:'internet',    anecdote:'Mot-valise franco-québécois formé de "courrier" et "électronique", proposé par l\'Office québécois de la langue française en <strong>1997</strong> pour remplacer "e-mail".' },
   { word:'wifi',         pos:'nom masculin',    epoch:'internet',    anecdote:'Contraction fantaisiste de <em>Wireless Fidelity</em>, inventée par une agence de marketing en <strong>1999</strong>. La technologie existait avant le nom — qui ne veut rien dire.' },
   { word:'hashtag',      pos:'nom masculin',    epoch:'internet',    anecdote:'Contraction de <em>hash</em> (dièse) et <em>tag</em> (étiquette). Proposé sur Twitter par Chris Messina en <strong>2007</strong>. Entré dans le Larousse en 2013.' },
+
+  // ── Antiquité (6 → 12) ──
+  { word:'ironie',       pos:'nom féminin',     epoch:'antiquite',   anecdote:'Du grec <em>eirōneia</em> (feinte ignorance). Socrate en avait fait une méthode philosophique au <strong>Ve siècle av. J.-C.</strong> — il prétendait ne rien savoir pour mieux déstabiliser ses interlocuteurs.' },
+  { word:'géographie',   pos:'nom féminin',     epoch:'antiquite',   anecdote:'Du grec <em>geōgraphia</em> — <em>gê</em> (terre) + <em>graphein</em> (décrire). Inventé par Ératosthène au <strong>IIIe siècle av. J.-C.</strong>, le premier à avoir mesuré la circonférence de la Terre.' },
+  { word:'athlète',      pos:'nom',             epoch:'antiquite',   anecdote:'Du grec <em>athlētēs</em> (celui qui concourt pour un prix). Les Jeux olympiques antiques datent de <strong>776 av. J.-C.</strong> Le mot est entré en français au XVIe siècle via le latin.' },
+  { word:'philosophie',  pos:'nom féminin',     epoch:'antiquite',   anecdote:'Du grec <em>philosophia</em> — <em>philos</em> (ami) + <em>sophia</em> (sagesse). Pythagore aurait été le premier à se qualifier de <em>philosophos</em> au <strong>VIe siècle av. J.-C.</strong>' },
+  { word:'démocratie',   pos:'nom féminin',     epoch:'antiquite',   anecdote:'Du grec <em>dēmokratia</em> — <em>dêmos</em> (peuple) + <em>kratos</em> (pouvoir). Inventée à Athènes par Clisthène vers <strong>508 av. J.-C.</strong> Le mot entre en français au XVIe siècle.' },
+  { word:'catastrophe',  pos:'nom féminin',     epoch:'antiquite',   anecdote:'Du grec <em>katastrophē</em> (renversement). Utilisé par Aristote dès le <strong>IVe siècle av. J.-C.</strong> pour le retournement final d\'une tragédie, bien avant son sens actuel de désastre.' },
+  // ── Moyen Âge (8 → 12) ──
+  { word:'vitrail',      pos:'nom masculin',    epoch:'medieval',    anecdote:'De <em>vitre</em>, du latin <em>vitrum</em> (verre). L\'art du vitrail s\'est épanoui dans les cathédrales gothiques à partir du <strong>XIIe siècle</strong>. La rose de Notre-Dame date de 1250.' },
+  { word:'jongleur',     pos:'nom masculin',    epoch:'medieval',    anecdote:'Du latin <em>joculatorem</em> (bouffon). Les jongleurs médiévaux chantaient, contaient et jouaient de la musique dans les cours dès le <strong>XIe siècle</strong> — bien plus que de simples acrobates.' },
+  { word:'bazar',        pos:'nom masculin',    epoch:'medieval',    anecdote:'Du persan <em>bāzār</em> (marché). Entré en français au <strong>XVIe siècle</strong> via le turc et l\'arabe, par les voies de la Route de la Soie. Son sens de "désordre" est bien plus tardif.' },
+  { word:'héraut',       pos:'nom masculin',    epoch:'medieval',    anecdote:'Du francique <em>hariwald</em> (chef d\'armée). Envoyé officiel entre armées ennemies dès le <strong>XIIe siècle</strong>, il est à l\'origine de l\'héraldique — l\'art des blasons.' },
+  // ── Renaissance (7 → 12) ──
+  { word:'gazette',      pos:'nom féminin',     epoch:'renaissance', anecdote:'Du vénitien <em>gazeta</em>, petite pièce de monnaie qui était le prix d\'un feuillet d\'information à Venise au <strong>XVIe siècle</strong>. La première gazette française date de 1631.' },
+  { word:'bibliothèque', pos:'nom féminin',     epoch:'renaissance', anecdote:'Du grec <em>bibliothēkē</em> — <em>biblion</em> (livre) + <em>thēkē</em> (coffre). Entré en français au <strong>XVe siècle</strong>. La première bibliothèque publique française ouvre à Paris en 1537, sur ordre de François Ier.' },
+  { word:'manuscrit',    pos:'nom masculin',    epoch:'renaissance', anecdote:'Du latin <em>manu scriptum</em> (écrit à la main). Le mot prend son sens plein avec l\'invention de l\'imprimerie par Gutenberg vers <strong>1450</strong> — pour distinguer les livres copiés des livres imprimés.' },
+  { word:'silhouette',   pos:'nom féminin',     epoch:'renaissance', anecdote:'Du nom d\'Étienne de Silhouette, ministre des finances de Louis XV réputé pour son avarice. Ses portraits "à l\'économie" — sans couleur ni détail — ont donné le mot vers <strong>1759</strong>.' },
+  { word:'charlatan',    pos:'nom masculin',    epoch:'renaissance', anecdote:'De l\'italien <em>ciarlatano</em> (bavard de foire). Les charlatans italiens vendaient leurs remèdes sur les places publiques dès le <strong>XVIe siècle</strong>. Le mot entre en français vers 1580.' },
+  // ── Ère industrielle (10 → 12) ──
+  { word:'télégraphe',   pos:'nom masculin',    epoch:'industrie',   anecdote:'Du grec <em>têle</em> (loin) + <em>graphein</em> (écrire). Inventé par Claude Chappe en <strong>1794</strong> sous forme optique, puis électrique par Morse en 1837. Une révolution dans la communication.' },
+  { word:'savant',       pos:'nom masculin',    epoch:'industrie',   anecdote:'Participe présent de <em>savoir</em>, devenu nom au XVIIe siècle. Mais c\'est au <strong>XIXe siècle</strong>, avec la professionnalisation de la science, qu\'il prend son sens moderne de "scientifique".' },
+  // ── XXe siècle (10 → 12) ──
+  { word:'aéroport',     pos:'nom masculin',    epoch:'xxe',         anecdote:'Du latin <em>aer</em> (air) + grec <em>portos</em> (port). Forgé en <strong>1929</strong> en France pour désigner les nouveaux terminaux de l\'aviation commerciale, calqué sur "port maritime".' },
+  { word:'plastique',    pos:'nom masculin',    epoch:'xxe',         anecdote:'Du grec <em>plastikos</em> (qui peut être modelé). Le premier plastique de synthèse, la Bakélite, est inventé en <strong>1907</strong>. Le mot prend son sens actuel dans les années <strong>1920</strong>.' },
+  // ── Ère numérique (9 → 12) ──
   { word:'spoiler',      pos:'nom masculin',    epoch:'internet',    anecdote:'De l\'anglais <em>to spoil</em> (gâcher). Utilisé sur les forums de cinéma dès le début des années <strong>2000</strong>. Entré dans le dictionnaire Robert en <strong>2019</strong>.' },
   { word:'streaming',    pos:'nom masculin',    epoch:'internet',    anecdote:'De l\'anglais <em>stream</em> (flux). La diffusion en continu se généralise avec YouTube en <strong>2005</strong> puis Netflix en 2007. L\'Académie française préconise "lecture en flux" — en vain.' },
   { word:'troll',        pos:'nom masculin',    epoch:'internet',    anecdote:'Du nom du monstre nordique, repris dans les années <strong>1990</strong> sur les forums Usenet pour désigner quelqu\'un qui provoque délibérément. Entré dans le Larousse en <strong>2011</strong>.' },
@@ -501,6 +551,17 @@ function todayKey() {
 
 // ─── ÉTAT ──────────────────────────────────────────────────────────────────
 let state = { score:0, round:0, streak:0, wordList:[], answered:false, breakdown:[] };
+
+// ─── ÉTAT MODE INFINI ──────────────────────────────────────────────────────
+let infState = {
+  active:   false,   // mode infini en cours ?
+  score:    0,
+  count:    0,       // nb de mots répondus
+  streak:   0,
+  pool:     [],      // file de mots mélangés
+  poolIdx:  0,       // curseur dans la file
+  seenToday: [],     // mots du tirage quotidien à éviter au début
+};
 
 function adjacentScore(chosen, correct) {
   const ci = EPOCHS.indexOf(correct), gi = EPOCHS.indexOf(chosen);
@@ -548,11 +609,17 @@ function buildSquares(container, breakdown) {
 
 // ─── HUD ───────────────────────────────────────────────────────────────────
 function renderHUD() {
-  document.getElementById('round-num').textContent   = state.round + 1;
-  document.getElementById('round-total').textContent = TOTAL;
-  document.getElementById('score-val').textContent   = state.score;
-  document.getElementById('streak-val').textContent  = state.streak;
-  document.getElementById('round-badge').textContent = romanNumeral(state.round + 1) + ' / ' + romanNumeral(TOTAL);
+  if (infState.active) {
+    document.getElementById('inf-count').textContent  = infState.count;
+    document.getElementById('inf-score').textContent  = infState.score;
+    document.getElementById('inf-streak').textContent = infState.streak;
+  } else {
+    document.getElementById('round-num').textContent   = state.round + 1;
+    document.getElementById('round-total').textContent = TOTAL;
+    document.getElementById('score-val').textContent   = state.score;
+    document.getElementById('streak-val').textContent  = state.streak;
+    document.getElementById('round-badge').textContent = romanNumeral(state.round + 1) + ' / ' + romanNumeral(TOTAL);
+  }
 }
 
 function renderWord(entry) {
@@ -563,12 +630,20 @@ function renderWord(entry) {
   document.querySelectorAll('.epoch-btn').forEach(b => { b.className = 'epoch-btn'; b.disabled = false; });
 }
 
-// ─── DÉROULEMENT ───────────────────────────────────────────────────────────
+function showInfiniteUI(on) {
+  document.getElementById('score-bar-normal').classList.toggle('hidden', on);
+  document.getElementById('score-bar-infinite').classList.toggle('hidden', !on);
+  document.getElementById('round-badge').style.display = on ? 'none' : '';
+  document.getElementById('inf-badge-card').style.display = on ? '' : 'none';
+}
+
+// ─── DÉROULEMENT NORMAL ────────────────────────────────────────────────────
 function startGame() {
   state.score = 0; state.round = 0; state.streak = 0; state.breakdown = [];
   state.wordList = getDailyWords();
-  document.getElementById('screen-intro').classList.add('hidden');
+  hideAllScreens();
   document.getElementById('game-wrap').style.display = 'block';
+  showInfiniteUI(false);
   renderHUD();
   loadRound();
 }
@@ -582,9 +657,18 @@ function loadRound() {
 function answer(chosen) {
   if (state.answered) return;
   state.answered = true;
-  const entry   = state.wordList[state.round];
-  const pts     = adjacentScore(chosen, entry.epoch);
-  const correct = (chosen === entry.epoch);
+
+  if (infState.active) {
+    answerInfinite(chosen);
+  } else {
+    answerNormal(chosen);
+  }
+}
+
+function answerNormal(chosen) {
+  const entry    = state.wordList[state.round];
+  const pts      = adjacentScore(chosen, entry.epoch);
+  const correct  = (chosen === entry.epoch);
   const adjacent = (pts === 50);
 
   if (correct) state.streak++; else state.streak = 0;
@@ -596,12 +680,126 @@ function answer(chosen) {
     result: correct ? 'correct' : adjacent ? 'adjacent' : 'wrong'
   });
 
+  highlightButtons(entry.epoch, chosen, correct);
+  showAnecdote(entry, bonus);
+  renderHUD();
+}
+
+function nextRound() {
+  if (infState.active) {
+    nextInfinite();
+  } else {
+    state.round++;
+    if (state.round >= TOTAL) endGame(); else loadRound();
+  }
+}
+
+// ─── FIN DE PARTIE NORMALE ────────────────────────────────────────────────
+function endGame() {
+  document.getElementById('game-wrap').style.display = 'none';
+  document.getElementById('screen-end').classList.remove('hidden');
+
+  document.getElementById('end-title').textContent = scoreTitle(state.score);
+  document.getElementById('end-score').textContent = state.score;
+  buildSquares(document.getElementById('score-squares'), state.breakdown);
+
+  const save = { score: state.score, breakdown: state.breakdown };
+  try { localStorage.setItem(todayKey(), JSON.stringify(save)); } catch(e) {}
+}
+
+// ─── MODE INFINI ───────────────────────────────────────────────────────────
+function buildInfinitePool(seenWords) {
+  // Exclure les mots déjà vus aujourd'hui pour commencer par des mots frais
+  // Puis reboucler sur toute la base mélangée aléatoirement
+  const seenSet  = new Set(seenWords.map(w => w.word));
+  const fresh    = BASE_WORDS.filter(w => !seenSet.has(w.word));
+  const seen     = BASE_WORDS.filter(w =>  seenSet.has(w.word));
+  // Mélange vrai (pas seedé — chaque session infinie est unique)
+  const rndShuffle = arr => {
+    const a = [...arr];
+    for (let i = a.length-1; i>0; i--) {
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
+    return a;
+  };
+  // Fresh d'abord, puis les mots du jour, puis on reboucle à l'infini
+  return [...rndShuffle(fresh), ...rndShuffle(seen)];
+}
+
+function startInfinite(seenWords) {
+  infState.active  = true;
+  infState.score   = 0;
+  infState.count   = 0;
+  infState.streak  = 0;
+  infState.seenToday = seenWords;
+  infState.pool    = buildInfinitePool(seenWords);
+  infState.poolIdx = 0;
+
+  hideAllScreens();
+  document.getElementById('game-wrap').style.display = 'block';
+  showInfiniteUI(true);
+  renderHUD();
+  loadInfiniteRound();
+}
+
+function loadInfiniteRound() {
+  // Reboucler quand on a épuisé la liste
+  if (infState.poolIdx >= infState.pool.length) {
+    infState.pool    = buildInfinitePool(infState.seenToday);
+    infState.poolIdx = 0;
+  }
+  state.answered = false;
+  renderWord(infState.pool[infState.poolIdx]);
+  renderHUD();
+}
+
+function answerInfinite(chosen) {
+  const entry    = infState.pool[infState.poolIdx];
+  const pts      = adjacentScore(chosen, entry.epoch);
+  const correct  = (chosen === entry.epoch);
+  const adjacent = (pts === 50);
+
+  if (correct) infState.streak++; else infState.streak = 0;
+  const bonus = infState.streak >= 3 ? 20 : 0;
+  infState.score += pts + bonus;
+  infState.count++;
+
+  highlightButtons(entry.epoch, chosen, correct);
+  showAnecdote(entry, bonus);
+  renderHUD();
+}
+
+function nextInfinite() {
+  infState.poolIdx++;
+  loadInfiniteRound();
+}
+
+function stopInfinite() {
+  infState.active = false;
+  showInfiniteUI(false);
+  document.getElementById('game-wrap').style.display = 'none';
+
+  // Recheck si partie du jour déjà jouée
+  let save = null;
+  try { save = JSON.parse(localStorage.getItem(todayKey())); } catch(e) {}
+  if (save && save.breakdown && save.breakdown.length === TOTAL) {
+    showAlreadyPlayed(save);
+  } else {
+    document.getElementById('screen-intro').classList.remove('hidden');
+  }
+}
+
+// ─── HELPERS PARTAGÉS ─────────────────────────────────────────────────────
+function highlightButtons(correctEpoch, chosen, correct) {
   document.querySelectorAll('.epoch-btn').forEach(b => {
     b.disabled = true;
-    if (b.dataset.ep === entry.epoch) b.classList.add(correct ? 'correct' : 'revealed');
+    if (b.dataset.ep === correctEpoch) b.classList.add(correct ? 'correct' : 'revealed');
     else if (b.dataset.ep === chosen && !correct) b.classList.add('wrong');
   });
+}
 
+function showAnecdote(entry, bonus) {
   const epochNames = {
     antiquite:'Antiquité (av. 500)', medieval:'Moyen Âge (500–1450)',
     renaissance:'Renaissance (1450–1700)', industrie:'Ère industrielle (1700–1900)',
@@ -611,31 +809,17 @@ function answer(chosen) {
   document.getElementById('anecdote-text').innerHTML    = entry.anecdote;
   document.getElementById('anecdote-card').classList.add('show');
   document.getElementById('btn-next').classList.add('show');
-  renderHUD();
 }
 
-function nextRound() {
-  state.round++;
-  if (state.round >= TOTAL) endGame(); else loadRound();
-}
-
-// ─── FIN DE PARTIE ─────────────────────────────────────────────────────────
-function endGame() {
-  document.getElementById('game-wrap').style.display = 'none';
-  document.getElementById('screen-end').classList.remove('hidden');
-
-  document.getElementById('end-title').textContent = scoreTitle(state.score);
-  document.getElementById('end-score').textContent = state.score;
-  buildSquares(document.getElementById('score-squares'), state.breakdown);
-
-  // Sauvegarde dans localStorage
-  const save = { score: state.score, breakdown: state.breakdown };
-  try { localStorage.setItem(todayKey(), JSON.stringify(save)); } catch(e) {}
+function hideAllScreens() {
+  ['screen-intro','screen-already','screen-end'].forEach(id =>
+    document.getElementById(id).classList.add('hidden')
+  );
 }
 
 // ─── ÉCRAN "DÉJÀ JOUÉ" ─────────────────────────────────────────────────────
 function showAlreadyPlayed(save) {
-  document.getElementById('screen-intro').classList.add('hidden');
+  hideAllScreens();
   document.getElementById('screen-already').classList.remove('hidden');
 
   const today = new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
@@ -643,9 +827,6 @@ function showAlreadyPlayed(save) {
   document.getElementById('already-title').textContent = scoreTitle(save.score);
   document.getElementById('already-score').textContent = save.score;
   buildSquares(document.getElementById('already-squares'), save.breakdown);
-
-  // Pour le bouton de partage de cet écran
-  document.getElementById('btn-export-already').addEventListener('click', () => exportScore(save));
 }
 
 // ─── EXPORT / PARTAGE ──────────────────────────────────────────────────────
@@ -680,23 +861,38 @@ function showToast() {
 function init() {
   buildStrata();
 
-  // Vérifier si le joueur a déjà joué aujourd'hui
   let save = null;
   try { save = JSON.parse(localStorage.getItem(todayKey())); } catch(e) {}
 
   if (save && save.breakdown && save.breakdown.length === TOTAL) {
     showAlreadyPlayed(save);
-    return;
+  } else {
+    document.getElementById('screen-intro').classList.remove('hidden');
   }
-
-  // Sinon afficher l'intro normalement
-  document.getElementById('screen-intro').classList.remove('hidden');
 }
 
 // ─── ÉVÉNEMENTS ────────────────────────────────────────────────────────────
 document.getElementById('btn-intro').addEventListener('click', startGame);
 document.getElementById('btn-next').addEventListener('click', nextRound);
 document.getElementById('btn-export').addEventListener('click', () => exportScore(null));
+
+// Boutons mode infini
+document.getElementById('btn-infinite-intro').addEventListener('click', () => startInfinite([]));
+document.getElementById('btn-infinite-already').addEventListener('click', () => {
+  let save = null;
+  try { save = JSON.parse(localStorage.getItem(todayKey())); } catch(e) {}
+  const seenWords = save ? save.breakdown.map(b => ({ word: b.word })) : [];
+  startInfinite(seenWords);
+});
+document.getElementById('btn-stop-infinite').addEventListener('click', stopInfinite);
+
+// Bouton partage depuis écran "déjà joué"
+document.getElementById('btn-export-already').addEventListener('click', () => {
+  let save = null;
+  try { save = JSON.parse(localStorage.getItem(todayKey())); } catch(e) {}
+  if (save) exportScore(save);
+});
+
 document.querySelectorAll('.epoch-btn').forEach(b => {
   b.addEventListener('click', () => answer(b.dataset.ep));
 });
